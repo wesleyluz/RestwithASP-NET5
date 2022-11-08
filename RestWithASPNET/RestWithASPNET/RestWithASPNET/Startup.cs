@@ -1,15 +1,12 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using RestWithASPNET.Services;
+using RestWithASPNET.Services.Implemenatations;
+using RestWithASPNET.Model.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace RestWithASPNET
 {
@@ -26,10 +23,15 @@ namespace RestWithASPNET
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
-            services.AddSwaggerGen(c => 
-            {
-                c.SwaggerDoc
-            })
+
+            var connection = Configuration["MySQLConnection:MySQLConnectionString"];
+
+            services.AddDbContext<MySqlContext>(options => options.UseMySql(
+                connection, 
+                new MySqlServerVersion(new System.Version())));
+
+                //Injeção de dependencia
+            services.AddScoped<IPersonService, PersonServiceImp>();
             services.AddRazorPages();
         }
 
@@ -48,6 +50,7 @@ namespace RestWithASPNET
             }
 
             app.UseHttpsRedirection();
+
             app.UseStaticFiles();
 
             app.UseRouting();
@@ -56,6 +59,7 @@ namespace RestWithASPNET
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapControllers();
                 endpoints.MapRazorPages();
             });
         }
