@@ -15,6 +15,7 @@ namespace RestWithASPNET.Model
         public string Address { get; set; }
         [Column("gender")]
         public string Gender { get; set; }
-
+        [Column("age")]
+        public long Age { get; set; }
     }
 }

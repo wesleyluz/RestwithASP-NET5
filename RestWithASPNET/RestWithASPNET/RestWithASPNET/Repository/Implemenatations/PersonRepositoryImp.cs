@@ -3,15 +3,14 @@ using RestWithASPNET.Model.Context;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 
-namespace RestWithASPNET.Services.Implemenatations
+namespace RestWithASPNET.Repository.Implemenatations
 {
-    public class PersonServiceImp : IPersonService
+    public class PersonRepositoryImp : IPersonRepository
     {
         private MySqlContext _context;
         
-        public PersonServiceImp(MySqlContext context) 
+        public PersonRepositoryImp(MySqlContext context) 
         {
             _context = context;
         }
@@ -84,7 +83,7 @@ namespace RestWithASPNET.Services.Implemenatations
             return person;
         }
 
-        private bool Exists(long id)
+        public bool Exists(long id)
         {
             return _context.People.Any(p => p.Id.Equals(id));
         }

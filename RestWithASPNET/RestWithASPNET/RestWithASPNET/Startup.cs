@@ -3,10 +3,15 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using RestWithASPNET.Services;
-using RestWithASPNET.Services.Implemenatations;
-using RestWithASPNET.Model.Context;
 using Microsoft.EntityFrameworkCore;
+//Model
+using RestWithASPNET.Model.Context;
+//Business
+using RestWithASPNET.Business;
+using RestWithASPNET.Business.Implemenatations;
+//Repository
+using RestWithASPNET.Repository;
+using RestWithASPNET.Repository.Implemenatations;
 
 namespace RestWithASPNET
 {
@@ -29,9 +34,13 @@ namespace RestWithASPNET
             services.AddDbContext<MySqlContext>(options => options.UseMySql(
                 connection, 
                 new MySqlServerVersion(new System.Version())));
-
+            services.AddApiVersioning();
+               
                 //Injeção de dependencia
-            services.AddScoped<IPersonService, PersonServiceImp>();
+            services.AddScoped<IPersonBusiness, PersonBusinessImp>();
+            services.AddScoped<IPersonRepository,PersonRepositoryImp>();
+            
+            
             services.AddRazorPages();
         }
 
