@@ -1,4 +1,6 @@
-﻿using RestWithASPNET.Model;
+﻿using RestWithASPNET.Data.Converter.Implematations;
+using RestWithASPNET.Data.VO;
+using RestWithASPNET.Model;
 using RestWithASPNET.Repository;
 using System.Collections.Generic;
 
@@ -6,19 +8,23 @@ namespace RestWithASPNET.Business.Implemenatations
 {
     public class PersonBusinessImp : IPersonBusiness
     {
-        private readonly IPersonRepository _repository;
+        private readonly IRepository<Person> _repository;
         
-        public PersonBusinessImp(IPersonRepository repository) 
+        private readonly PersonConverter _converter;
+        
+        public PersonBusinessImp(IRepository<Person> repository) 
         {
             _repository = repository;
+            _converter = new PersonConverter();
         }
 
       
 
-        public Person Create(Person person)
+        public PersonVO Create(PersonVO person)
         {
-            
-            return _repository.Create(person);
+            var personEntity = _converter.Parse(person);
+            personEntity= _repository.Create(personEntity);
+            return _converter.Parse(personEntity);
         }
 
         public void Delete(long id)
@@ -27,22 +33,24 @@ namespace RestWithASPNET.Business.Implemenatations
 
         }
 
-        public List<Person> FindAll()
+        public List<PersonVO> FindAll()
         {
-            return _repository.FindAll();
+            return _converter.Parse(_repository.FindAll());
         }
 
       
-        public Person FindbyId(long id)
+        public PersonVO FindbyId(long id)
         {
            
-            return _repository.FindbyId(id);
+            return _converter.Parse(_repository.FindbyId(id));
         }
 
-        public Person Update(Person person)
+        public PersonVO Update(PersonVO person)
         {
-            
-            return _repository.Update(person);
+
+            var personEntity = _converter.Parse(person);
+            personEntity = _repository.Update(personEntity);
+            return _converter.Parse(personEntity);
         }
     }
 }
