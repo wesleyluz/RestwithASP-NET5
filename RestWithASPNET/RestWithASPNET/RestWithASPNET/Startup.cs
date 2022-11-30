@@ -4,6 +4,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using System;
+using System.Collections.Generic;
 //Model
 using RestWithASPNET.Model.Context;
 //Business
@@ -11,38 +14,81 @@ using RestWithASPNET.Business;
 using RestWithASPNET.Business.Implemenatations;
 //Repository
 using RestWithASPNET.Repository;
-using RestWithASPNET.Repository.Implemenatations;
+using RestWithASPNET.Repository.Generic;
+using Microsoft.Net.Http.Headers;
+using RestWithASPNET.Hypermedia.Filters;
+using RestWithASPNET.Hypermedia.Enricher;
 
 namespace RestWithASPNET
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
 
         public IConfiguration Configuration { get; }
+        public IWebHostEnvironment Environment { get; }
+        public Startup(IConfiguration configuration, IWebHostEnvironment environment)
+        {
+            Configuration = configuration;
+            Environment = environment;
+
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                .CreateLogger();
+        }
+
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+
+           
             services.AddControllers();
 
-            var connection = Configuration["MySQLConnection:MySQLConnectionString"];
+            var connection = Configuration["MySQLConnection:MySQLConnectionString"]; 
+            
+            if (Environment.IsDevelopment())
+            {
+                MigrateDataBase(connection);
+            }
+
 
             services.AddDbContext<MySqlContext>(options => options.UseMySql(
                 connection, 
                 new MySqlServerVersion(new System.Version())));
+
+            //
+            services.AddMvc(options =>
+            {
+                options.RespectBrowserAcceptHeader = true;
+
+                options.FormatterMappings.SetMediaTypeMappingForFormat("xml", MediaTypeHeaderValue.Parse("application/xml"));
+                options.FormatterMappings.SetMediaTypeMappingForFormat("json", MediaTypeHeaderValue.Parse("application/json"));
+
+            })
+            .AddXmlSerializerFormatters();
+
+            var filterOptions = new HyperMediaFilterOptions();
+            filterOptions.ContentResponseEnricherList.Add(new PersonEnricher());
+            filterOptions.ContentResponseEnricherList.Add(new BookEnricher());
+            services.AddSingleton(filterOptions);
+            
+           
+            // Versioning
             services.AddApiVersioning();
                
-                //Injeção de dependencia
+            //Injeção de dependencia
+                // Person
             services.AddScoped<IPersonBusiness, PersonBusinessImp>();
-            services.AddScoped<IPersonRepository,PersonRepositoryImp>();
+                // Book
+            services.AddScoped<IBookBusiness, BookBusinessImp>();
+                //  Generic repository
+            services.AddScoped(typeof(IRepository<>),typeof(GenericRepository<>));
             
             
             services.AddRazorPages();
         }
+
+      
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -69,8 +115,29 @@ namespace RestWithASPNET
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                //endpoints.MapControllerRoute("DefaultApi", "{controller=values}/{id?}"); versão antiga
+                endpoints.MapControllerRoute("DefaultApi", "{controller=values}/v{version=apiVersion}/{id?}");
                 endpoints.MapRazorPages();
             });
+        }
+        private void MigrateDataBase(string connection)
+        {
+            try
+            {
+                var evolveConection = new MySql.Data.MySqlClient.MySqlConnection(connection);
+                var evolve = new Evolve.Evolve(evolveConection, msg => Log.Information(msg))
+                {
+                    Locations = new List<string> { "db/migrations", "db/dataset" },
+                    IsEraseDisabled = true,
+                };
+                evolve.Migrate();
+
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Migration data base falied", ex);
+                throw;
+            }
         }
     }
 }
