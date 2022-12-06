@@ -18,6 +18,8 @@ using RestWithASPNET.Repository.Generic;
 using Microsoft.Net.Http.Headers;
 using RestWithASPNET.Hypermedia.Filters;
 using RestWithASPNET.Hypermedia.Enricher;
+using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Rewrite;
 
 namespace RestWithASPNET
 {
@@ -40,7 +42,12 @@ namespace RestWithASPNET
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
+            services.AddCors(options => options.AddDefaultPolicy(builder =>
+            {
+                builder.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+            }));
            
             services.AddControllers();
 
@@ -75,6 +82,22 @@ namespace RestWithASPNET
            
             // Versioning
             services.AddApiVersioning();
+            // Swagger
+            services.AddSwaggerGen(c => 
+            {
+                c.SwaggerDoc("v1",
+                    new OpenApiInfo
+                    {
+                        Title = "Rest API",
+                        Version = "v1",
+                        Description = "Api development in progress",
+                        Contact = new OpenApiContact 
+                        {
+                            Name = "Wesley Luz",
+                            Url = new Uri("https://github.com/wesleyluz")
+                        }
+                    });
+            });
                
             //Injeção de dependencia
                 // Person
@@ -82,7 +105,7 @@ namespace RestWithASPNET
                 // Book
             services.AddScoped<IBookBusiness, BookBusinessImp>();
                 //  Generic repository
-            services.AddScoped(typeof(IRepository<>),typeof(GenericRepository<>));
+            services.AddScoped(typeof(IRepository<>),typeof(GenericRepository<>));  
             
             
             services.AddRazorPages();
@@ -109,6 +132,20 @@ namespace RestWithASPNET
             app.UseStaticFiles();
 
             app.UseRouting();
+            // depois de UseHttp, routing antes de endpoints
+            app.UseCors();
+
+            app.UseSwagger();
+            
+            app.UseSwaggerUI(c => 
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Rest Api - v1");
+            });
+
+            var option = new RewriteOptions();
+            option.AddRedirect("^$","swagger");
+            app.UseRewriter(option); 
+
 
             app.UseAuthorization();
 
