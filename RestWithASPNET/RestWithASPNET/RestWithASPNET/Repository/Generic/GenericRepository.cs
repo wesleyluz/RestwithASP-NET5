@@ -7,11 +7,9 @@ using System.Linq;
 
 namespace RestWithASPNET.Repository.Generic
 {
-    public class GenericRepository<T> : IRepository<T>  where T: BaseEntity
-    {
-
-        private MySqlContext _context;
-
+    public class GenericRepository<T> : IRepository<T> where T : BaseEntity
+    { 
+        protected MySqlContext _context;
         private DbSet<T> _dataSet;
 
         public GenericRepository(MySqlContext context)
@@ -30,11 +28,11 @@ namespace RestWithASPNET.Repository.Generic
             }
             catch (Exception)
             {
-
                 throw;
             }
            
         }
+
         public T Update(T item)
         {
             var result = _dataSet.SingleOrDefault(p => p.Id.Equals(item.Id));
@@ -48,13 +46,10 @@ namespace RestWithASPNET.Repository.Generic
                 }
                 catch (Exception)
                 {
-
                     throw;
                 }
             }
-            
             return null;
-            
         }
 
         public void Delete(long id)
@@ -70,7 +65,6 @@ namespace RestWithASPNET.Repository.Generic
                 }
                 catch (Exception)
                 {
-
                     throw;
                 }
             }
@@ -91,5 +85,24 @@ namespace RestWithASPNET.Repository.Generic
             return _dataSet.SingleOrDefault(p => p.Id.Equals(id)); 
         }
 
+        public List<T> FindWithPagedSearch(string query)
+        {
+            return _dataSet.FromSqlRaw<T>(query).ToList();
+        }
+
+        public int GetCount(string query)
+        {
+            var result = "";
+            using (var connection = _context.Database.GetDbConnection())
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = query;
+                    result = command.ExecuteScalar().ToString();
+                }
+            }
+            return int.Parse(result);
+        }
     }
 }
