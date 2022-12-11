@@ -17,6 +17,8 @@ namespace RestWithASPNET.Data.VO
         public string Gender { get; set; }
 
         public long Age { get; set; }
+
+        public bool Enabled { get; set; }
         public List<HyperMediaLink> Links { get; set; } = new List<HyperMediaLink>();
     }
 }

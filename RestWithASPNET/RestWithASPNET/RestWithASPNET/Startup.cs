@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 //Model
 using RestWithASPNET.Model.Context;
 //Business
@@ -18,6 +21,16 @@ using RestWithASPNET.Repository.Generic;
 using Microsoft.Net.Http.Headers;
 using RestWithASPNET.Hypermedia.Filters;
 using RestWithASPNET.Hypermedia.Enricher;
+using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Rewrite;
+using RestWithASPNET.Services;
+using RestWithASPNET.Services.Implementations;
+using RestWithASPNET.Repository.UserRep;
+using RestWithASPNET.Configurations;
+using System.Text;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.AspNetCore.Http;
 
 namespace RestWithASPNET
 {
@@ -41,6 +54,46 @@ namespace RestWithASPNET
         public void ConfigureServices(IServiceCollection services)
         {
 
+            var tokenConfigurations = new TokenConfiguration();
+            new ConfigureFromConfigurationOptions<TokenConfiguration>(
+                    Configuration.GetSection("TokenConfigurations")
+                )
+            .Configure(tokenConfigurations);
+
+            services.AddSingleton(tokenConfigurations);
+
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options => 
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = tokenConfigurations.Issuer,
+                    ValidAudience = tokenConfigurations.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenConfigurations.Secret))
+                };
+            });
+
+            services.AddAuthorization(auth =>
+            {
+                auth.AddPolicy("Bearer",new AuthorizationPolicyBuilder()
+                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser().Build());
+            });
+
+            services.AddCors(options => options.AddDefaultPolicy(builder =>
+            {
+                builder.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+            }));
            
             services.AddControllers();
 
@@ -75,14 +128,42 @@ namespace RestWithASPNET
            
             // Versioning
             services.AddApiVersioning();
-               
+            // Swagger
+            services.AddSwaggerGen(c => 
+            {
+                c.SwaggerDoc("v1",
+                    new OpenApiInfo
+                    {
+                        Title = "Rest API",
+                        Version = "v1",
+                        Description = "Api development in progress",
+                        Contact = new OpenApiContact 
+                        {
+                            Name = "Wesley Luz",
+                            Url = new Uri("https://github.com/wesleyluz")
+                        }
+                    });
+            });
+
             //Injeção de dependencia
+
+            services.TryAddSingleton<IHttpContextAccessor,HttpContextAccessor>();
+
+
                 // Person
             services.AddScoped<IPersonBusiness, PersonBusinessImp>();
+            services.AddScoped<IPersonRepository, PersonRepository>();
                 // Book
             services.AddScoped<IBookBusiness, BookBusinessImp>();
+            
+                //Validation Injections
+            services.AddTransient<ITokenService, TokenService>();
+            services.AddScoped<ILoginBusiness, LoginBusinessImp>()
+                .AddScoped<IUserRepository, UserRepository>()
+                .AddScoped<IFileBusiness, FileBusinessImp>();
+
                 //  Generic repository
-            services.AddScoped(typeof(IRepository<>),typeof(GenericRepository<>));
+            services.AddScoped(typeof(IRepository<>),typeof(GenericRepository<>));  
             
             
             services.AddRazorPages();
@@ -109,6 +190,20 @@ namespace RestWithASPNET
             app.UseStaticFiles();
 
             app.UseRouting();
+            // depois de UseHttp, routing antes de endpoints
+            app.UseCors();
+
+            app.UseSwagger();
+            
+            app.UseSwaggerUI(c => 
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Rest Api - v1");
+            });
+
+            var option = new RewriteOptions();
+            option.AddRedirect("^$","swagger");
+            app.UseRewriter(option); 
+
 
             app.UseAuthorization();
 
