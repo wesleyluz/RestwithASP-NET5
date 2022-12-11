@@ -10,14 +10,14 @@ using System.Security.Claims;
 
 namespace RestWithASPNET.Business.Implemenatations
 {
-    public class LoginBusiness : ILoginBusiness
+    public class LoginBusinessImp : ILoginBusiness
     {
         private const string DATE_FORMAT = "yyyy-MM-dd HH:mm:sss";
         private TokenConfiguration _configuration;
         private IUserRepository _repository;
         private readonly ITokenService _tokenService;
 
-        public LoginBusiness(TokenConfiguration configuration, IUserRepository repository, ITokenService tokenService)
+        public LoginBusinessImp(TokenConfiguration configuration, IUserRepository repository, ITokenService tokenService)
         {
             _configuration = configuration;
             _repository = repository;

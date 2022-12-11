@@ -29,6 +29,8 @@ using RestWithASPNET.Repository.UserRep;
 using RestWithASPNET.Configurations;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.AspNetCore.Http;
 
 namespace RestWithASPNET
 {
@@ -142,8 +144,12 @@ namespace RestWithASPNET
                         }
                     });
             });
-               
+
             //Injeção de dependencia
+
+            services.TryAddSingleton<IHttpContextAccessor,HttpContextAccessor>();
+
+
                 // Person
             services.AddScoped<IPersonBusiness, PersonBusinessImp>();
             services.AddScoped<IPersonRepository, PersonRepository>();
@@ -152,8 +158,9 @@ namespace RestWithASPNET
             
                 //Validation Injections
             services.AddTransient<ITokenService, TokenService>();
-            services.AddScoped<ILoginBusiness, LoginBusiness>()
-                .AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<ILoginBusiness, LoginBusinessImp>()
+                .AddScoped<IUserRepository, UserRepository>()
+                .AddScoped<IFileBusiness, FileBusinessImp>();
 
                 //  Generic repository
             services.AddScoped(typeof(IRepository<>),typeof(GenericRepository<>));  

@@ -23,16 +23,16 @@ namespace RestWithASPNET.Controllers
             _bookBusiness = bookBusiness;
         }
 
-        [HttpGet]
+        [HttpGet("{sortDirection}/{pageSize}/{page}")]
         [ProducesResponseType((200), Type = typeof(List<BookVO>))]
         [ProducesResponseType((204))]
         [ProducesResponseType((400))]
         [ProducesResponseType((401))]
         [TypeFilter(typeof(HyperMediaFilter))]
-        public IActionResult Get()
+        public IActionResult Get([FromQuery] string author, string sortDirection, int pageSize, int page)
         {
 
-            return Ok(_bookBusiness.FindAll());
+            return Ok(_bookBusiness.FindWithPagedSearch(author,sortDirection,pageSize,page));
         }
 
         [HttpGet("{id}")]
